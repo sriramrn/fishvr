@@ -79,7 +79,8 @@ import builtins
 from direct.showbase.ShowBase import ShowBase
 from direct.task import Task
 from direct.interval.LerpInterval import LerpColorScaleInterval
-from panda3d.core import AmbientLight, DirectionalLight, Vec4, ClockObject, loadPrcFileData
+from direct.interval.IntervalGlobal import LerpFunc
+from panda3d.core import AmbientLight, DirectionalLight, Vec4, Fog, ClockObject, loadPrcFileData
 from panda3d.core import CardMaker, TextureStage
 from panda3d.core import CollisionHandlerPusher, CollisionNode, CollisionSphere, CollisionTraverser, BitMask32
 import teensytimer
@@ -529,6 +530,18 @@ class ZebrafishVirtualReality(ShowBase):
 
         self.drawLandmarks() # this function can be called dynamically to toggle landmark visibility using flags    
 
+        # -------------------------------------------------
+        # Fog with linear falloff of visibility
+        # -------------------------------------------------
+        self.fog_color = Vec4(0.7, 0.8, 1.0, 1)
+        self.setBackgroundColor(self.fog_color)
+        self.fog = Fog("sceneFog")
+        self.fog.setMode(Fog.MLinear)
+        self.fog.setLinearRange(0.1, 0.2) #start and end distance from camera (in metres), reaches 0 visibility at end distance.
+        self.fog.setColor(self.fog_color)
+        self.render.setFog(self.fog)
+
+
         # set up collision handling
         # doing this before updating position from origin seems to be important
         # collision detection fails if initial position is updated before setting up collision handling
@@ -566,6 +579,13 @@ class ZebrafishVirtualReality(ShowBase):
                           "repeat" : self.repcount, "trial_config" : self.trialconfig,
                           "nodes" : self.nodes}
         
+
+    def fadeFog(self, t):
+        r = self.fog_color[0] * (1 - t)
+        g = self.fog_color[1] * (1 - t)
+        b = self.fog_color[2] * (1 - t)
+        self.fog.setColor(r, g, b)
+            
 
     def drawLandmarks(self):
         #Landmarks can be redrawn dynamically in spinCameraTask by setting flags accordingly
@@ -1082,12 +1102,14 @@ class ZebrafishVirtualReality(ShowBase):
 
             if self.fade_out == False:
                 LerpColorScaleInterval(self.render, self.fade_duration, (0, 0, 0, 1.0)).start()
+                LerpFunc(self.fadeFog, fromData=0, toData=1, duration=self.fade_duration).start()
                 self.fade_timer = self.frame_onset_time
                 self.fade_out = True
 
             if self.frame_onset_time - self.fade_timer >= self.fade_duration and self.fade_in == False:
                 self.setupScene()
                 LerpColorScaleInterval(self.render, self.fade_duration, (1, 1, 1, 1.0)).start()
+                LerpFunc(self.fadeFog, fromData=1, toData=0, duration=self.fade_duration).start()
                 self.fade_in = True  
 
             if (self.frame_onset_time - self.state_onset_time >= self.intertrial_duration or 
