@@ -577,8 +577,8 @@ class ZebrafishVirtualReality(ShowBase):
         self.getNodes()
         self.trialinfo = {"trial_number" : self.trial, "trial_index" : self.trial_index,
                           "repeat" : self.repcount, "trial_config" : self.trialconfig,
-                          "nodes" : self.nodes}
-        
+                          "nodes" : self.nodes}                    
+
 
     def fadeFog(self, t):
         r = self.fog_color[0] * (1 - t)
